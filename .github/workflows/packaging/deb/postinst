@@ -1,4 +1,11 @@
 #!/bin/bash
 
+if [ -f /usr/bin/aws ]; then
+    rm -f /usr/bin/aws
+fi
+if [ -f /usr/bin/aws_completer ]; then
+    rm -f /usr/bin/aws_completer
+fi
+
 ln -s /usr/local/aws-cli/v2/current/bin/aws /usr/bin/aws
 ln -s /usr/local/aws-cli/v2/current/bin/aws_completer /usr/bin/aws_completer
