@@ -1,0 +1,4 @@
+#!/bin/bash
+
+ln -s /usr/local/aws-cli/v2/current/bin/aws /usr/bin/aws
+ln -s /usr/local/aws-cli/v2/current/bin/aws_completer /usr/bin/aws_completer
