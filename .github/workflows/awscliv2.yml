@@ -19,14 +19,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # - name: Retrieve latest release version
-      #   id: latest_release
-      #   uses: pozetroninc/github-action-get-latest-release@master
-      #   with:
-      #     repository: ${{ github.repository }}
+      - name: Retrieve latest release version
+        id: latest_release
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          repository: ${{ github.repository }}
 
-      # - name: Latest release is ${{ steps.latest_release.outputs.release }}
-      #   run: echo "Latest release is ${{ steps.latest_release.outputs.release }}"
+      - name: Latest release is ${{ steps.latest_release.outputs.release }}
+        run: echo "Latest release is ${{ steps.latest_release.outputs.release }}"
 
       - name: Install dependencies
         run: |
@@ -58,12 +58,12 @@ jobs:
           echo "$VERSION" > /tmp/version
 
       # If latest release version is the same as awscliv2 version, then skip build
-      # - name: Check if latest release version is the same as actual awscliv2 version
-      #   run: |
-      #     if [ "${{ steps.latest_release.outputs.release }}" == "${{ env.AWSCLI_VERSION }}" ]; then
-      #       echo "Latest release version is the same as awscliv2 version, skip build"
-      #       exit 1
-      #     fi
+      - name: Check if latest release version is the same as actual awscliv2 version
+        run: |
+          if [ "${{ steps.latest_release.outputs.release }}" == "${{ env.AWSCLI_VERSION }}" ]; then
+            echo "Latest release version is the same as awscliv2 version, skip build"
+            exit 1
+          fi
 
       - name: Install build packages
         run: apt-get install build-essential binutils lintian debhelper dh-make devscripts -y
@@ -79,14 +79,13 @@ jobs:
 
       - name: Copy control file
         run: |
-          cp ${GITHUB_WORKSPACE}/.github/workflows/packaging/control /tmp/awscliv2-build/DEBIAN/control
+          cp ${GITHUB_WORKSPACE}/.github/workflows/packaging/deb/control /tmp/awscliv2-build/DEBIAN/control
           sed -i "s/__VERSION__/${{ env.AWSCLI_VERSION }}/g" /tmp/awscliv2-build/DEBIAN/control
 
       - name: Copy preinst and postinst script
         run: |
-#         cp ${GITHUB_WORKSPACE}/.github/workflows/packaging/deb/preinst /tmp/awscliv2-build/DEBIAN/preinst
           cp ${GITHUB_WORKSPACE}/.github/workflows/packaging/deb/postinst /tmp/awscliv2-build/DEBIAN/postinst
-          chmod 755 /tmp/awscliv2-build/DEBIAN/preinst /tmp/awscliv2-build/DEBIAN/postinst
+          chmod 755 /tmp/awscliv2-build/DEBIAN/postinst
 
       - name: Build package
         run: |
@@ -111,6 +110,25 @@ jobs:
           retention-days: 1
 
   #
+  # Test on Debian 10
+  #
+  test-on-debian10:
+    needs:
+      - build-deb
+    runs-on: ubuntu-latest
+    container:
+      image: debian:10
+      options: --user root
+    steps:   
+      - name: Retrieve awscliv2 deb package
+        uses: actions/download-artifact@v3
+        with:
+          path: ~/assets
+
+      - name: Install awscliv2
+        run: apt-get install ~/assets/*/*.deb -y
+  
+  #
   # Test on Debian 11
   #
   test-on-debian11:
@@ -127,7 +145,7 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: atp-get install ~/assets/*/*.deb -y
+        run: apt-get install ~/assets/*/*.deb -y
 
   #
   # Test on Debian 12
@@ -146,51 +164,52 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: atp-get install ~/assets/*/*.deb -y
+        run: apt-get install ~/assets/*/*.deb -y
 
   #
   # Create release
   #
-  # release:
-  #   needs:
-  #     - build-deb
-  #     - test-on-debian11
-  #     - test-on-debian12
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     # Download builded packages artifacts
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         path: ~/assets
+  release:
+    needs:
+      - build-deb
+      - test-on-debian10
+      - test-on-debian11
+      - test-on-debian12
+    runs-on: ubuntu-latest
+    steps:
+      # Download builded packages artifacts
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ~/assets
 
-  #     # Move all deb packages to deb folder and retrieve awscliv2 version
-  #     - name: Retrieve awscliv2 version from artifact
-  #       run: |
-  #         mkdir -p ~/assets/deb
-  #         mv ~/assets/*/*.deb ~/assets/deb/
-  #         VERSION=$(cat ~/assets/version/version)
-  #         echo "AWSCLI_VERSION=$VERSION" >> $GITHUB_ENV
+      # Move all deb packages to deb folder and retrieve awscliv2 version
+      - name: Retrieve awscliv2 version from artifact
+        run: |
+          mkdir -p ~/assets/deb
+          mv ~/assets/*/*.deb ~/assets/deb/
+          VERSION=$(cat ~/assets/version/version)
+          echo "AWSCLI_VERSION=$VERSION" >> $GITHUB_ENV
 
-  #     - name: Create release
-  #       id: create_release
-  #       uses: actions/create-release@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         tag_name: ${{ env.AWSCLI_VERSION }}
-  #         release_name: ${{ env.AWSCLI_VERSION }}
-  #         body: |
-  #           Automatic DEB build for **awscliv2** version ${{ env.AWSCLI_VERSION }}
-  #         draft: false
-  #         prerelease: false
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.AWSCLI_VERSION }}
+          release_name: ${{ env.AWSCLI_VERSION }}
+          body: |
+            Automatic DEB build for **awscliv2** version ${{ env.AWSCLI_VERSION }}
+          draft: false
+          prerelease: false
 
-  #     # Upload packages to release
-  #     - name: Upload packages
-  #       id: upload-release-assets
-  #       uses: dwenegar/upload-release-assets@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         release_id: ${{ steps.create_release.outputs.id }}
-  #         assets_path: ~/assets/deb
+      # Upload packages to release
+      - name: Upload packages
+        id: upload-release-assets
+        uses: dwenegar/upload-release-assets@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_id: ${{ steps.create_release.outputs.id }}
+          assets_path: ~/assets/deb
