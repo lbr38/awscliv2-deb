@@ -126,7 +126,9 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: apt-get install ~/assets/*/*.deb -y
+        run: |
+          apt-get update -y
+          apt-get install ~/assets/*/*.deb -y
   
   #
   # Test on Debian 11
@@ -145,7 +147,9 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: apt-get install ~/assets/*/*.deb -y
+        run: |
+          apt-get update -y
+          apt-get install ~/assets/*/*.deb -y
 
   #
   # Test on Debian 12
@@ -164,7 +168,9 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: apt-get install ~/assets/*/*.deb -y
+        run: |
+          apt-get update -y
+          apt-get install ~/assets/*/*.deb -y
 
   #
   # Create release
