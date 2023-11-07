@@ -3,6 +3,7 @@ Version: __VERSION__
 Section: main
 Priority: optional
 Architecture: all
+Depends: libc-bin, groff, less
 Maintainer: Ludovic <repomanager@protonmail.com>
 Description: The AWS Command Line Interface (AWS CLI) is an open source tool that enables you to interact with AWS services using commands in your command-line shell.
 Homepage: https://github.com/lbr38/awscliv2-deb

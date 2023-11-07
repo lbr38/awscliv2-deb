@@ -126,7 +126,9 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: apt-get install ~/assets/*/*.deb -y
+        run: |
+          apt-get update -y
+          apt-get install ~/assets/*/*.deb -y
   
   #
   # Test on Debian 11
@@ -145,7 +147,9 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: apt-get install ~/assets/*/*.deb -y
+        run: |
+          apt-get update -y
+          apt-get install ~/assets/*/*.deb -y
 
   #
   # Test on Debian 12
@@ -164,7 +168,9 @@ jobs:
           path: ~/assets
 
       - name: Install awscliv2
-        run: apt-get install ~/assets/*/*.deb -y
+        run: |
+          apt-get update -y
+          apt-get install ~/assets/*/*.deb -y
 
   #
   # Create release
@@ -186,10 +192,10 @@ jobs:
       # Move all deb packages to deb folder and retrieve awscliv2 version
       - name: Retrieve awscliv2 version from artifact
         run: |
-          mkdir -p ~/assets/deb
-          mv ~/assets/*/*.deb ~/assets/deb/
           VERSION=$(cat ~/assets/version/version)
           echo "AWSCLI_VERSION=$VERSION" >> $GITHUB_ENV
+          mkdir -p ~/assets/deb
+          mv ~/assets/*/*.deb ~/assets/deb/awscliv2_${VERSION}.deb
 
       - name: Create release
         id: create_release
@@ -204,7 +210,7 @@ jobs:
           draft: false
           prerelease: false
 
-      # Upload packages to release
+      # Upload package to release
       - name: Upload packages
         id: upload-release-assets
         uses: dwenegar/upload-release-assets@v1
@@ -213,3 +219,22 @@ jobs:
         with:
           release_id: ${{ steps.create_release.outputs.id }}
           assets_path: ~/assets/deb
+
+      - name: Upload package to repository
+        run: |
+          cd ~/assets/deb/
+          curl --fail -X POST -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -F "files=@awscliv2_${{ env.AWSCLI_VERSION }}.deb" https://packages.bespin.ovh/api/v2/snapshot/31/upload
+          curl --fail -X POST -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -F "files=@awscliv2_${{ env.AWSCLI_VERSION }}.deb" https://packages.bespin.ovh/api/v2/snapshot/32/upload
+          curl --fail -X POST -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -F "files=@awscliv2_${{ env.AWSCLI_VERSION }}.deb" https://packages.bespin.ovh/api/v2/snapshot/33/upload
+          curl --fail -X POST -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -F "files=@awscliv2_${{ env.AWSCLI_VERSION }}.deb" https://packages.bespin.ovh/api/v2/snapshot/34/upload
+          curl --fail -X POST -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -F "files=@awscliv2_${{ env.AWSCLI_VERSION }}.deb" https://packages.bespin.ovh/api/v2/snapshot/35/upload
+          curl --fail -X POST -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -F "files=@awscliv2_${{ env.AWSCLI_VERSION }}.deb" https://packages.bespin.ovh/api/v2/snapshot/36/upload
+
+      - name: Rebuild repository metadata
+        run: |
+          curl --fail -X PUT -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -d '{"gpgSign":"yes"}' https://packages.bespin.ovh/api/v2/snapshot/31/rebuild
+          curl --fail -X PUT -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -d '{"gpgSign":"yes"}' https://packages.bespin.ovh/api/v2/snapshot/32/rebuild
+          curl --fail -X PUT -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -d '{"gpgSign":"yes"}' https://packages.bespin.ovh/api/v2/snapshot/33/rebuild
+          curl --fail -X PUT -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -d '{"gpgSign":"yes"}' https://packages.bespin.ovh/api/v2/snapshot/34/rebuild
+          curl --fail -X PUT -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -d '{"gpgSign":"yes"}' https://packages.bespin.ovh/api/v2/snapshot/35/rebuild
+          curl --fail -X PUT -H "Authorization: Bearer ${{ secrets.REPOSITORY_TOKEN }}" -d '{"gpgSign":"yes"}' https://packages.bespin.ovh/api/v2/snapshot/36/rebuild
